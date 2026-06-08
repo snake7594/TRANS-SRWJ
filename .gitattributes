@@ -1,0 +1,6 @@
+# 줄바꿈 정규화 (저장소에는 LF로 저장)
+* text=auto
+
+# 바이너리로 취급 (혹시 추적되더라도 변형 금지)
+*.gba binary
+*.bin binary

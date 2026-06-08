@@ -1,0 +1,39 @@
+# ── ROM / 세이브 (절대 커밋 금지 — 저작권 보호 대상) ─────────────
+*.gba
+*.gb
+*.bin
+*.sav
+*.srm
+*.ss0
+
+# ── 패치 작업용 입력/출력 ROM (관용 파일명) ──────────────────────
+input.gba
+all.gba
+jp.gba
+srwj_korean_all.gba
+srwj_battle_kr.gba
+
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# ── OS / 에디터 ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.idea/
+.vscode/
+
+# ── 임시 ─────────────────────────────────────────────────────────
+*.tmp
+*.log
