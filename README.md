@@ -49,62 +49,66 @@ GBA 『슈퍼로봇대전 J』(Super Robot Taisen J, 2005)의 **게임 전반을
 각 단계는 앞 단계 결과 ROM을 입력으로 받아 누적 적용합니다.
 
 ```
-원본 일본판 ROM (16MB)
+원본 일본판 ROM  Super Robot Taisen J (Japan).gba  (16MB)
    │
-   ▼  1. 폰트변경      한자 글리프 → 한글 2350자 (물마루 Mulmaru 폰트)
-   ▼  4. 이미지        타이틀/에피소드 제목/전투 메시지/저작권/UI 그래픽 한글화
-   ▼  0. 시나리오      전 70챕터 대사 삽입 (ROM 16→32MB 자동 확장)
-   ▼  2. 전투대사패치  전투 대사·합체기 삽입 (32MB ROM 필요)
-   ▼  3. SJIS추출      메뉴/용어 등 시스템 텍스트 삽입
+   ▼  0. 시나리오   patch_all.py    대사 삽입(xlsx) · ROM 16→32MB 확장   → srwj_korean_all_s.gba
+   ▼  1. 폰트변경   fill_hangul_galmuri.py + patch_glyph.py  한글 2350자  → srwj_korean_all_sf.gba
+   ▼  2. 전투대사   패치하기.py     전투 대사·합체기                      → srwj_korean_all_sfc.gba
+   ▼  3. SJIS추출   build_patch.py  메뉴/용어/조건 등 시스템 텍스트        → 슈퍼로봇대전J_한글.gba
+   ▼  4. 이미지     apply_all.py    타이틀/제목/전투메시지/저작권/UI       → srwj_korean_all.gba (최종 32MB)
    │
-   ▼  통합 한글 ROM (32MB)  ──[ xdelta ]──►  배포용 *.xdelta 차분 패치
+   └──[ xdelta ]──►  배포용 .xdelta 차분 패치 (Releases)
 ```
 
+> **빌드는 반드시 폴더 번호 0 → 1 → 2 → 3 → 4 순서**로 진행하며, 각 폴더의 `!bulid.bat` 가 그 단계의 명령입니다.
+> 한 단계의 출력 ROM을 다음 폴더로 복사한 뒤 그 폴더의 `!bulid.bat` 를 실행합니다. (3단계는 입력을 `3. SJIS추출/input/out.gba` 로 넣습니다.)
+
 > **핵심 원리 — 한글 = 한자 자리 바꿔치기**
-> 폰트 단계에서 일본 한자 글리프(2350자) 자리에 한글(`가`~`힣`)을 덮어씁니다. 이후 텍스트에 한글을
-> 적을 때는 같은 격자에 있던 한자의 Shift‑JIS 코드를 적습니다 (한글 → EUC‑KR → 같은 바이트를
-> EUC‑JP로 해석 = 한자 → 그 한자의 cp932 코드). 한글 대사는 원문보다 길어 원래 자리에 안 들어가므로,
-> 빈 공간에 블록을 새로 기록하고 포인터를 갱신하며, 모자라면 ROM을 32MB까지 자동 확장합니다.
+> 폰트 단계(1)에서 일본 한자 글리프(2350자) 자리에 한글(`가`~`힣`)을 덮어씁니다. 텍스트(대사·메뉴)에
+> 한글을 적을 때는 같은 격자에 있던 한자의 Shift‑JIS 코드를 적습니다 (한글 → EUC‑KR → 같은 바이트를
+> EUC‑JP로 해석 = 한자 → 그 한자의 cp932 코드). 글리프 덮어쓰기와 텍스트 기록은 ROM의 서로 다른
+> 영역이라 순서와 무관합니다. 한글 대사는 원문보다 길어 원래 자리에 안 들어가면 빈 공간에 새로 기록하고
+> 포인터를 갱신하며, 모자라면 ROM을 32MB까지 자동 확장합니다.
 
 ---
 
 ## 단계별 상세
 
-### 1. 폰트변경 — 한글 폰트 이식
-한자 폰트 슬롯(SJIS `0x889F`~)에 한글 2350자를 16×11 비트맵으로 렌더링해 채웁니다. 반각 가타카나는
-폭 압축(max‑pool)으로 처리합니다.
-- `fill_hangul_galmuri.py` — 2350자 일괄 채우기. 예: `python fill_hangul_galmuri.py in.gba out.gba --font Mulmaru.ttf --size 12 --ox 1 --oy 0`
-- `patch_glyph.py` — 개별 글리프 교체(예: `ド→도`), 반각 자동 압축, `--preview` ASCII 미리보기
-- 폰트는 **물마루(Mulmaru)** 를 사용합니다. (폰트 파일은 라이선스상 저장소에 미포함 — 별도 준비)
-
-### 4. 이미지 — 그래픽 한글화
-ECD(LZSS) 압축 아카이브(약 15,000개 에셋)를 풀고 한글 이미지를 다시 넣습니다.
-- `apply_all.py` — 타이틀 로고 + 에피소드 제목 68개 + 전투 메시지 70종 + 저작권 화면 + UI 아이콘 일괄 적용
-- `make_titles.py` / `scn_title_insert.py` / `scn_title_extract.py` — 에피소드 제목 PNG 렌더·삽입·추출(SCR 타일맵 재생성·타일 중복 제거)
-- `img_replace.py` · `bm_extract.py` · `credits_make.py` — 일반 이미지 교체 / 팔레트 보정 추출 / 저작권 화면 생성
-- 데이터: `titles_ko.txt`(제목표), `credits_ko.txt`(저작권 문구), `pal_override.json`(팔레트 보정)
-
-### 0. 시나리오 — 스토리 대사
-전 70챕터 대사를 번역 매칭 엑셀에서 읽어 ROM에 삽입합니다. 모자라면 ROM을 자동 확장합니다.
-- `patch_all.py` — 메인 패처. 예: `python patch_all.py --xlsx srwj_matched_all.xlsx --expand-dict --rom "Super Robot Taisen J (Japan).gba" --out srwj_korean_all_s.gba`
+### 0. 시나리오 — 스토리 대사  *(1단계)*
+일본판 원본 ROM에 전 70챕터 대사를 번역 매칭 엑셀에서 읽어 삽입합니다. 모자라면 ROM을 32MB까지 자동 확장합니다.
+- `patch_all.py` — 메인 패처. 예: `python patch_all.py --xlsx srwj_matched_all_0625.xlsx --expand-dict --rom "Super Robot Taisen J (Japan).gba" --out srwj_korean_all_s.gba`
   - 옵션: `--reserve N`(화자「 예약 폭, 기본 7) · `--keep-jp`(미번역 턴은 일본어 유지) · `--placeholder-text "..."` · `--addr 0x...`
 - `srwj_codec.py`(인코딩) · `srwj_wrap.py`(줄바꿈: 한 줄 14자, 첫 줄 7자) · `srwj_decode.py` · `srwj_parser.py` · `srwj_inject_lib.py` · `merge_xlsx.py`
 - 데이터: **`srwj_matched_all_*.xlsx`** (번역 단일 원본 — `J열`(한국어)만 수정), `korea2350.txt`/`japan2350.txt`(폰트 매핑), `seg1_victim_rank.json`
 
-### 2. 전투대사패치 — 전투/합체기 대사
+### 1. 폰트변경 — 한글 폰트 이식  *(2단계)*
+한자 폰트 슬롯(SJIS `0x889F`~)에 한글 2350자를 16×11 비트맵으로 렌더링해 채웁니다. 반각 가타카나는
+폭 압축(max‑pool)으로 처리합니다.
+- `fill_hangul_galmuri.py` — 2350자 일괄 채우기. 예: `python fill_hangul_galmuri.py srwj_korean_all_s.gba srwj_korean_all_sf0.gba --font Galmuri11.ttf --size 12 --ox 1 --oy -1`
+- `patch_glyph.py` — 개별 글리프 교체, 반각 자동 압축, `--preview` ASCII 미리보기. 예: `python patch_glyph.py srwj_korean_all_sf0.gba srwj_korean_all_sf.gba`
+- 폰트는 **Galmuri11** 을 사용합니다. (폰트 파일은 라이선스상 저장소에 미포함 — 별도 준비)
+
+### 2. 전투대사패치 — 전투/합체기 대사  *(3단계)*
 JSON 기반으로 전투 대사를 삽입합니다. 합체기 블록(blk193)은 **바이트 길이를 보존하는 제자리 패치**로
 화자/연출 동기화 깨짐(이른바 도몬 버그)을 방지합니다.
-- `패치하기.py` — 메인 런처: `python 패치하기.py [input.gba] [output.gba]`
+- `패치하기.py` — 메인 런처: `python 패치하기.py srwj_korean_all_sf.gba srwj_korean_all_sfc.gba`
 - `build_battle_json.py`(추출) · `srwj_battle_kr_insert.py`(삽입 엔진) · `rewrap_battle.py`(줄바꿈) · `verify_battle.py`(검증) · `srwj_battle_codec.py`(코덱)
-- 데이터: `battle_dialogue.json` / `battle_dialogue_unique.json`(`ko`만 수정), `battle_dialogue_glossary.json`(용어 일관성 적용본)
-- 입력 ROM은 폰트·타이틀·시나리오가 적용된 **32MB** 여야 합니다.
+- 데이터: `battle_dialogue.json`(패치 사용) / `battle_dialogue_unique.json`(`ko`만 수정), `battle_dialogue_glossary.json`(용어 일관성 적용본 — 참고)
+- 입력 ROM은 시나리오·폰트가 적용된 **32MB** 여야 합니다.
 
-### 3. SJIS추출 — 메뉴/용어/시스템 텍스트
-메뉴·정신커맨드·아이템 설명 등 SJIS 문자열을 추출·번역해 패치합니다. 슬롯에 맞으면 제자리, 넘치면
-빈 공간으로 재배치하고 포인터를 갱신합니다.
+### 3. SJIS추출 — 메뉴/용어/조건/시스템 텍스트  *(4단계)*
+메뉴·정신커맨드·아이템 설명·승리/패배 조건 등 SJIS 문자열을 추출·번역해 패치합니다. 슬롯에 맞으면 제자리, 넘치면
+빈 공간으로 재배치하고 포인터를 갱신합니다. **입력은 `input/out.gba`** (앞 단계 출력)로 넣습니다.
 - `build_patch.py` — `translations.json` → 패치 ROM(`output/슈퍼로봇대전J_한글.gba`) + `build_report.json`
 - `srwj_codec.py`(코덱) · `verify.py`(검증: 미완성 카나/장음 잔존 탐지) · `remove_ko_spaces.py`(공백 정리)
-- 데이터: **`translations.json`** (용어사전 겸 시스템 텍스트, 3267항목 — `ko`만 수정)
+- 데이터: **`translations.json`** (용어사전 겸 시스템 텍스트, 3267항목 — `ko`만 수정). 조건 문자열은 고정 폭이라 슬롯을 정확히 채워야 합니다.
+
+### 4. 이미지 — 그래픽 한글화  *(5단계, 최종)*
+ECD(LZSS) 압축 아카이브(약 15,000개 에셋)를 풀고 한글 이미지를 다시 넣어 **최종 ROM `srwj_korean_all.gba`** 를 만듭니다.
+- `apply_all.py` — 타이틀 로고 + 에피소드 제목 68개 + 전투 메시지 70종 + 저작권 화면 + UI 아이콘 일괄 적용. 예: `python apply_all.py 슈퍼로봇대전J_한글.gba srwj_korean_all.gba`
+- `make_titles.py` / `scn_title_insert.py` / `scn_title_extract.py` — 에피소드 제목 PNG 렌더·삽입·추출(SCR 타일맵 재생성·타일 중복 제거)
+- `img_replace.py` · `bm_extract.py` · `credits_make.py` — 일반 이미지 교체 / 팔레트 보정 추출 / 저작권 화면 생성
+- 데이터: `titles_ko.txt`(제목표), `credits_ko.txt`(저작권 문구), `pal_override.json`(팔레트 보정), `시나리오제목/neodgm.ttf`·`저작권화면/Galmuri9.ttf`(렌더 폰트)
 
 ### 루트 / 빌드 — 배포 패치 생성
 - `!xdelta_e_SRWJ.bat` — 통합 한글 ROM에서 `xdelta` 차분 패치를 생성:
